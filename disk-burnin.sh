@@ -287,9 +287,12 @@ readonly LOG_DIR
 readonly HOSTNAME="$(hostname)"
 readonly OS_FLAVOR="$(uname)"
 
+# update the smartctl command to include the needed -d flag
+SMARTCTL="smartctl"
+
 # SMART static information
-readonly SMART_INFO="$(smartctl --info "${DRIVE}")"
-readonly SMART_CAPABILITIES="$(smartctl --capabilities "${DRIVE}")"
+readonly SMART_INFO="$(${SMARTCTL} --info "${DRIVE}")"
+readonly SMART_CAPABILITIES="$(${SMARTCTL} --capabilities "${DRIVE}")"
 
 ##################################################
 # Get SMART information value.
@@ -504,14 +507,14 @@ log_runtime_info() {
 poll_selftest_complete() {
   l_poll_duration_seconds=0
   while [ "${l_poll_duration_seconds}" -lt "${POLL_TIMEOUT_SECONDS}" ]; do
-    smartctl --all "${DRIVE}" \
+    ${SMARTCTL} --all "${DRIVE}" \
       | grep -i "The previous self-test routine completed" > /dev/null 2>&1
     l_status="$?"
     if [ "${l_status}" -eq 0 ]; then
       log_info "SMART self-test succeeded"
       return 0
     fi
-    smartctl --all "${DRIVE}" \
+    ${SMARTCTL} --all "${DRIVE}" \
       | grep -i "of the test failed\." > /dev/null 2>&1
     l_status="$?"
     if [ "${l_status}" -eq 0 ]; then
@@ -538,11 +541,11 @@ poll_selftest_complete() {
 ##################################################
 run_smart_test() {
   log_header "Running SMART $1 test"
-  dry_run_wrapper "smartctl --test=\"$1\" \"${DRIVE}\""
+  dry_run_wrapper "${SMARTCTL} --test=\"$1\" \"${DRIVE}\""
   log_info "SMART $1 test started, awaiting completion for $2 seconds ..."
   dry_run_wrapper "sleep \"$2\""
   dry_run_wrapper "poll_selftest_complete"
-  dry_run_wrapper "smartctl --log=selftest \"${DRIVE}\" | tee -a \"${LOG_FILE}\""
+  dry_run_wrapper "${SMARTCTL} --log=selftest \"${DRIVE}\" | tee -a \"${LOG_FILE}\""
   log_info "Finished SMART $1 test"
 }
 
@@ -576,7 +579,7 @@ run_badblocks_test() {
 ##################################################
 log_full_device_info() {
   log_header "Drive information"
-  dry_run_wrapper "smartctl --xall --vendorattribute=7,hex48 \"${DRIVE}\" | tee -a \"${LOG_FILE}\""
+  dry_run_wrapper "${SMARTCTL} --xall --vendorattribute=7,hex48 \"${DRIVE}\" | tee -a \"${LOG_FILE}\""
 }
 
 ##################################################
